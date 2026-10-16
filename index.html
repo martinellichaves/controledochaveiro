@@ -8838,7 +8838,7 @@ compreendeu e concorda integralmente com este Termo.</pre
 
         const elementoEtiquetaCampoFiltroCategoria = document.createElement("label")
         elementoEtiquetaCampoFiltroCategoria.htmlFor = idCampoFiltroCategoria
-        elementoEtiquetaCampoFiltroCategoria.textContent = "Categoria"
+        elementoEtiquetaCampoFiltroCategoria.textContent = "Categoria do produto"
 
         elementoCampoFiltroCategoria.append(elementoEtiquetaCampoFiltroCategoria)
 
@@ -8943,6 +8943,7 @@ compreendeu e concorda integralmente com este Termo.</pre
         if (tipo) lista = lista.filter((t) => t.tipo === tipo)
 
         if (filtroCategoria !== "") {
+          const categoriaBusca = String(filtroCategoria ?? "").trim().toLowerCase()
           const mapaServicos = new Map(CACHE.servicos
           .filter(function filtrarServicoPorId(servico = null) {
             let valor = false
@@ -8994,7 +8995,7 @@ compreendeu e concorda integralmente com este Termo.</pre
               if (categoriaProduto === null) {
                 continue
               }
-              if (categoriaProduto === filtroCategoria) {
+              if (String(categoriaProduto).trim().toLowerCase() === categoriaBusca) {
                 valor = true
                 break
               }
