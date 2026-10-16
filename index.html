@@ -8830,6 +8830,43 @@ compreendeu e concorda integralmente com este Termo.</pre
           navigate("dashboard")
           return
         }
+
+        // filtro por categoria
+        const idCampoFiltroCategoria = "campo_filtro_categoria"
+        const elementoCampoFiltroCategoria = document.createElement("div")
+        elementoCampoFiltroCategoria.classList.add("filtro", "categoria")
+
+        const elementoEtiquetaCampoFiltroCategoria = document.createElement("label")
+        elementoEtiquetaCampoFiltroCategoria.htmlFor = idCampoFiltroCategoria
+        elementoEtiquetaCampoFiltroCategoria.textContent = "Categoria"
+
+        elementoCampoFiltroCategoria.append(elementoEtiquetaCampoFiltroCategoria)
+
+        const elementoCampoDeTextoFiltroCategoria = document.createElement("input")
+        elementoCampoDeTextoFiltroCategoria.id = idCampoFiltroCategoria
+        elementoCampoDeTextoFiltroCategoria.setAttribute("oninput", "renderFinanceiro()")
+        elementoCampoFiltroCategoria.append(elementoCampoDeTextoFiltroCategoria)
+
+        const elementoListaCategorias = document.createElement("datalist")
+        elementoListaCategorias.id = "lista_categorias"
+        elementoCampoDeTextoFiltroCategoria.setAttribute("list", "lista_categorias")
+        elementoCampoFiltroCategoria.append(elementoListaCategorias)
+        const categorias = []
+
+        // @problema: versão ainda chama produto de chave
+        for (const produto of CACHE.chaves) {
+          const categoria = produto?.categoria ?? null
+          if (typeof categoria !== "string" ||
+          categoria.trim() === "" ||
+          categorias.includes(categoria) === true) {
+            continue
+          }
+          const elementoOpcaoCategoria = document.createElement("option")
+          elementoOpcaoCategoria.value = categoria
+          categorias.push(categoria)
+          elementoListaCategorias.append(elementoOpcaoCategoria)
+        }
+
         $("main").innerHTML = `
     <div class="page-head">
       <div class="head-left">
@@ -8845,6 +8882,7 @@ compreendeu e concorda integralmente com este Termo.</pre
       <select id="txForma" onchange="renderFinanceiro()"><option value="">Todas as formas</option></select>
       <select id="txOrigem" onchange="renderFinanceiro()"><option value="">OS e financeiro</option><option value="os">Só de vendas/OS</option><option value="avulso">Só financeiro avulso</option></select>
       <select id="txStatusPag" onchange="renderFinanceiro()"><option value="">Pagos e pendentes</option><option value="pago">Só pagos/recebidos</option><option value="pendente">Só pendentes (a pagar/receber)</option></select>
+      ${ elementoCampoFiltroCategoria?.outerHTML ?? "" }
       <button class="btn btn-sec" onclick="renderFinanceiro()">Filtrar</button>
     </div>
     <div id="txStats"></div>
@@ -8887,6 +8925,7 @@ compreendeu e concorda integralmente com este Termo.</pre
         const de = $("txDe")?.value || ""
         const ate = $("txAte")?.value || ""
         const tipo = $("txTipo")?.value || ""
+        const filtroCategoria = $("campo_filtro_categoria")?.value ?? ""
         const func = $("txFunc")?.value || ""
         const forma = $("txForma")?.value || ""
         const origem = $("txOrigem")?.value || ""
@@ -8902,6 +8941,68 @@ compreendeu e concorda integralmente com este Termo.</pre
         if (ate)
           lista = lista.filter((t) => (t.criado_em || "").slice(0, 10) <= ate)
         if (tipo) lista = lista.filter((t) => t.tipo === tipo)
+
+        if (filtroCategoria !== "") {
+          const mapaServicos = new Map(CACHE.servicos
+          .filter(function filtrarServicoPorId(servico = null) {
+            let valor = false
+            if ((servico?.id ?? null) !== null) {
+              valor = true
+            }
+            return valor
+          }).map(function mapearServicosPorId(servico = null) {
+            return [String(servico.id), servico]
+          }))
+          const mapaProdutos = new Map(CACHE.chaves
+          .filter(function filtrarProdutoPorId(produto = null) {
+            let valor = false
+            if ((produto?.id ?? null) !== null) {
+              valor = true
+            }
+            return valor
+          }).map(function mapearProdutosPorId(produto = null) {
+            return [String(produto.id), produto]
+          }))
+          lista = lista.filter(function filtrarPorCategoria(transacao = null) {
+            let valor = false
+            if (transacao === null) {
+              return valor
+            }
+            const idServico = transacao["servico_id"] ?? null
+            if (idServico === null) {
+              return valor
+            }
+            const servico = mapaServicos.get(String(idServico)) ?? null
+            if (servico === null) {
+              return valor
+            }
+            const itens = servico.itens ?? []
+            if (itens.length <= 0) {
+              return valor
+            }
+            // @problema: laços aninhados
+            for (const item of itens) {
+              if (item === null) {
+                continue
+              }
+              const idProduto = item["chave_id"] ?? null
+              if (idProduto === null) {
+                continue
+              }
+              const produto = mapaProdutos.get(String(idProduto)) ?? null
+              const categoriaProduto = produto?.categoria ?? null
+              if (categoriaProduto === null) {
+                continue
+              }
+              if (categoriaProduto === filtroCategoria) {
+                valor = true
+                break
+              }
+            }
+            return valor
+          })
+        }
+
         if (func) lista = lista.filter((t) => String(t.funcionario_id) === func)
         if (forma)
           lista = lista.filter(
